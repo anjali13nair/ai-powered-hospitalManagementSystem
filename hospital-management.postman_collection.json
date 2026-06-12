@@ -1,0 +1,379 @@
+﻿{
+  "info": {
+    "name": "Hospital Management API",
+    "description": "Postman collection generated from the Spring Boot REST controllers. Base path includes server.servlet.context-path=/api/v1. Most protected requests use the collection variable {{token}} as a Bearer token. Login stores jwt into {{token}} automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "patientId", "value": "1", "type": "string" },
+    { "key": "doctorId", "value": "2", "type": "string" },
+    { "key": "appointmentId", "value": "1", "type": "string" },
+    { "key": "patientName", "value": "Aarav Sharma", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup Patient",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"patient1@example.com\",\n  \"password\": \"password\",\n  \"name\": \"Patient One\",\n  \"roles\": [\"PATIENT\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/signup", "host": ["{{baseUrl}}"], "path": ["auth", "signup"] },
+            "description": "Public. Creates a User and Patient. Use roles [\"PATIENT\"] for normal patient signup."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.id) pm.collectionVariables.set('patientId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"patient1@example.com\",\n  \"password\": \"password\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "description": "Public. Response shape is { jwt, userId }. Test script stores jwt into collection variable {{token}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.jwt) pm.collectionVariables.set('token', body.jwt);",
+                  "  if (body.userId) pm.collectionVariables.set('patientId', body.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Get Public Doctors",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/public/doctors", "host": ["{{baseUrl}}"], "path": ["public", "doctors"] },
+            "description": "Public endpoint. Returns all doctors."
+          }
+        },
+        {
+          "name": "Get Public Departments",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/departments/public", "host": ["{{baseUrl}}"], "path": ["departments", "public"] },
+            "description": "Listed as /departments/public in controller, but WebSecurity only permits /public/** and /auth/**. If unauthenticated access returns 401, login first or adjust security rules."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin - Get Patients Paginated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/patients?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "patients"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Requires ADMIN role."
+          }
+        },
+        {
+          "name": "Admin - Onboard New Doctor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"specialization\": \"Cardiology\",\n  \"name\": \"Dr. Example\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/onBoardNewDoctor", "host": ["{{baseUrl}}"], "path": ["admin", "onBoardNewDoctor"] },
+            "description": "Requires ADMIN role. Creates Doctor linked to an existing User by userId and adds DOCTOR role to that user."
+          }
+        },
+        {
+          "name": "Admin - Delete Patient",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/patients/{{patientId}}", "host": ["{{baseUrl}}"], "path": ["admin", "patients", "{{patientId}}"] },
+            "description": "Requires admin-like permission. Note: current WebSecurityConfig checks APPOINTMENT_DELETE/USER_MANAGE enum names, while User authorities contain appointment:delete/user:manage strings, so this may return 403 until fixed."
+          }
+        },
+        {
+          "name": "Admin - Delete Doctor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/doctors/{{doctorId}}", "host": ["{{baseUrl}}"], "path": ["admin", "doctors", "{{doctorId}}"] },
+            "description": "Requires admin-like permission. Same DELETE authority mismatch note as Delete Patient."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Departments",
+      "item": [
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cardiology\",\n  \"headDoctorId\": {{doctorId}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/departments/admin", "host": ["{{baseUrl}}"], "path": ["departments", "admin"] },
+            "description": "Requires ADMIN role via @PreAuthorize."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "Patient - Create Appointment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doctorId\": {{doctorId}},\n  \"patientId\": {{patientId}},\n  \"appointmentTime\": \"2026-06-01T10:30:00\",\n  \"reason\": \"General checkup\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/patients/appointments", "host": ["{{baseUrl}}"], "path": ["patients", "appointments"] },
+            "description": "Requires ROLE_PATIENT by method security in AppointmentService."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.id) pm.collectionVariables.set('appointmentId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patient - Get Profile By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/patients/{{patientId}}/profile", "host": ["{{baseUrl}}"], "path": ["patients", "{{patientId}}", "profile"] },
+            "description": "Authenticated. Returns one patient profile."
+          }
+        },
+        {
+          "name": "Patient - Get All Patients Paginated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/all?pageNumber=0&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "all"],
+              "query": [
+                { "key": "pageNumber", "value": "0" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            },
+            "description": "Authenticated. No role-specific annotation in controller/service."
+          }
+        },
+        {
+          "name": "Patient - Search By Exact Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/patients/{{patientName}}", "host": ["{{baseUrl}}"], "path": ["patients", "{{patientName}}"] },
+            "description": "Authenticated. Path variable is patient name. Beware conflict with other /patients/{...} patterns if name looks like another literal path."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "item": [
+        {
+          "name": "Doctor - Get My Appointments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/doctors/appointments", "host": ["{{baseUrl}}"], "path": ["doctors", "appointments"] },
+            "description": "Requires DOCTOR or ADMIN by WebSecurityConfig. Service also checks ADMIN or same doctor principal id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Insurance",
+      "item": [
+        {
+          "name": "Assign Insurance To Patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"POL-{{patientId}}-001\",\n  \"provider\": \"HDFC\",\n  \"validUntil\": \"2030-12-12\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/insurance/patient/{{patientId}}", "host": ["{{baseUrl}}"], "path": ["insurance", "patient", "{{patientId}}"] },
+            "description": "Requires ADMIN or patientId == authenticated user id."
+          }
+        },
+        {
+          "name": "Remove Insurance From Patient",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/insurance/patient/{{patientId}}", "host": ["{{baseUrl}}"], "path": ["insurance", "patient", "{{patientId}}"] },
+            "description": "Requires ADMIN or patientId == authenticated user id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "AI - Triage Symptoms",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptoms\": \"Fever, sore throat, body ache for two days\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/ai/triage", "host": ["{{baseUrl}}"], "path": ["ai", "triage"] },
+            "description": "Requires ROLE_PATIENT. Uses OpenAI and available Department names from DB."
+          }
+        },
+        {
+          "name": "AI - Ask Patient History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/patient/{{patientId}}/ask?question=What%20are%20the%20patient's%20recent%20symptoms%3F",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "patient", "{{patientId}}", "ask"],
+              "query": [
+                { "key": "question", "value": "What are the patient's recent symptoms?" }
+              ]
+            },
+            "description": "Requires ROLE_DOCTOR or ROLE_ADMIN. Uses pgvector RAG over ingested patient notes."
+          }
+        },
+        {
+          "name": "AI - Extract Clinical Note",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "text/plain" }],
+            "body": {
+              "mode": "raw",
+              "raw": "Patient complains of fever and cough for 3 days. Prescribe paracetamol 500mg twice daily and rest. Follow up if symptoms worsen.",
+              "options": { "raw": { "language": "text" } }
+            },
+            "url": { "raw": "{{baseUrl}}/ai/notes/extract/{{appointmentId}}", "host": ["{{baseUrl}}"], "path": ["ai", "notes", "extract", "{{appointmentId}}"] },
+            "description": "Requires ROLE_DOCTOR. Sends raw plain text note; service extracts symptoms, prescription, and summary into Appointment."
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth2 Browser Flow",
+      "item": [
+        {
+          "name": "OAuth2 - Google Authorization",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/oauth2/authorization/google", "host": ["{{baseUrl}}"], "path": ["oauth2", "authorization", "google"] },
+            "description": "Spring Security generated OAuth2 login endpoint, not a controller method. Best tested in browser rather than Postman."
+          }
+        },
+        {
+          "name": "OAuth2 - GitHub Authorization",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/oauth2/authorization/github", "host": ["{{baseUrl}}"], "path": ["oauth2", "authorization", "github"] },
+            "description": "Spring Security generated OAuth2 login endpoint, not a controller method. Best tested in browser rather than Postman."
+          }
+        },
+        {
+          "name": "OAuth2 - Twitter Authorization",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/oauth2/authorization/twitter", "host": ["{{baseUrl}}"], "path": ["oauth2", "authorization", "twitter"] },
+            "description": "Spring Security generated OAuth2 login endpoint, not a controller method. Best tested in browser rather than Postman."
+          }
+        }
+      ]
+    }
+  ]
+}
